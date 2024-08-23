@@ -2,7 +2,6 @@ from sklearn.pipeline import make_pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler, FunctionTransformer
-from sklearn.model_selection import train_test_split
 import joblib
 import pandas as pd
 
@@ -19,30 +18,34 @@ def preprocess_dataframe(data):
 
     return data
 
+def feature_engineering(data):
+    X = X.copy()  # To avoid modifying the original DataFrame
+    
+    # Torque to Speed Ratio
+    X['tts_ratio'] = X['Torque [Nm]'] / X['Rotational speed [rpm]']
+    
+    # Temperature and Tool Wear Interaction
+    X['temp_wear_interaction'] = X['Process temperature [K]'] * X['Tool wear [min]']
+    
+    return X
+
 def build_pipeline(config):
     # Create the FunctionTransformer for the preprocessing step
     preprocessor = FunctionTransformer(preprocess_dataframe, validate=False)
 
-    # Create the pipeline with preprocessing, scaling, and logistic regression
+    feature_eng = FunctionTransformer(feature_engineering, validate=False)
+
+    # Create the pipeline with preprocessing, imputation, scaling, and logistic regression
     imputer = SimpleImputer(missing_values=pd.NA, strategy=config['model']['imputer_strategy'])
     scaler = StandardScaler()
     lr = LogisticRegression(max_iter=500)
 
     # Build and return the pipeline
-    return make_pipeline(preprocessor, imputer, scaler, lr)
+    return make_pipeline(preprocessor, feature_eng, imputer, scaler, lr)
 
-def evaluate_model(model, X_train, y_train, X_test, y_test):
-    train_score = model.score(X_train, y_train)
-    test_score = model.score(X_test, y_test)
-    return train_score, test_score
+def train_model(model, X, y):
+    model.fit(X, y)
+    return model
 
 def save_model(model, file_path):
     joblib.dump(model, file_path)
-
-def split_data(X, y, config):
-    return train_test_split(
-        X, y, 
-        test_size=config['model']['test_size'], 
-        stratify=y if config['model']['stratify'] else None, 
-        random_state=config['model']['random_state']
-    )

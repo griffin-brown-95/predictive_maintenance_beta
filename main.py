@@ -1,5 +1,5 @@
 import yaml
-from modeling import build_pipeline, evaluate_model, save_model, split_data
+from modeling import build_pipeline, train_model, save_model
 import pandas as pd
 
 def load_data(file_path, drop_columns):
@@ -19,19 +19,11 @@ def main():
     y = df[config['data']['target_column']]
     X = df.drop([config['data']['target_column']], axis=1)
 
-    # Split data
-    X_train, X_test, y_train, y_test = split_data(X, y, config)
-
-    # Build and train model with integrated preprocessing and scaling
+    # Build pipeline and train model
     model = build_pipeline(config)
-    model.fit(X_train, y_train)
+    model = train_model(model, X, y)
 
-    # Evaluate model
-    train_score, test_score = evaluate_model(model, X_train, y_train, X_test, y_test)
-    print(f"Training Accuracy: {train_score}")
-    print(f"Testing Accuracy: {test_score}")
-
-    # Save the trained model
+    # Save trained model
     save_model(model, config['output']['model_file'])
 
 if __name__ == "__main__":
